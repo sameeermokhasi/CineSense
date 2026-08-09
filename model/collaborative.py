@@ -25,6 +25,7 @@ SURPRISE_AVAILABLE = False
 IMPLICIT_AVAILABLE = False
 
 try:
+    # pyrefly: ignore [missing-import]
     from surprise import SVD, Dataset, Reader
     SURPRISE_AVAILABLE = True
 except ImportError:
@@ -166,17 +167,19 @@ class CollaborativeRecommender:
             self.user_factors = np.zeros((num_users, self.n_factors), dtype=np.float32)
 
             for mid, idx in self.movie_id_to_idx.items():
-                if trainset.knows_item(mid):
+                try:
                     inner_iid = trainset.to_inner_iid(mid)
                     self.item_factors[idx] = algo.qi[inner_iid]
-                else:
+                except ValueError:
                     # Cold start initialized with small random noise
                     self.item_factors[idx] = np.random.normal(0, 0.01, size=self.n_factors)
 
             for uid, idx in self.user_id_to_idx.items():
-                if trainset.knows_user(uid):
+                try:
                     inner_uid = trainset.to_inner_uid(uid)
                     self.user_factors[idx] = algo.pu[inner_uid]
+                except ValueError:
+                    pass
         else:
             logger.info("Fitting SVD using Truncated SVD Matrix Factorization...")
             # Build sparse user-item matrix
