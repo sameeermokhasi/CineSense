@@ -5,9 +5,16 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+import difflib
 from dotenv import load_dotenv
 import requests
-from rapidfuzz import process, fuzz
+
+try:
+    from rapidfuzz import process, fuzz
+    HAS_RAPIDFUZZ = True
+except ImportError:
+    HAS_RAPIDFUZZ = False
+
 
 # Add the parent directory to sys.path so pickle can find the 'model' module
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -87,12 +94,14 @@ def recommend(title: str = Query(..., description="Movie title to search for"), 
         return {"query": title, "recommendations": recommendations}
         
     except ValueError as e:
-        # Title not found in database, use rapidfuzz to suggest titles
+        # Title not found in database, suggest closest titles
         all_titles = list(recommender.title_to_id.keys())
-        # Find closest matches
-        matches = process.extract(title, all_titles, scorer=fuzz.ratio, limit=5)
-        suggestions = [match[0] for match in matches if match[1] > 50]
-            
+        if HAS_RAPIDFUZZ:
+            matches = process.extract(title, all_titles, scorer=fuzz.ratio, limit=5)
+            suggestions = [match[0] for match in matches if match[1] > 50]
+        else:
+            suggestions = difflib.get_close_matches(title, all_titles, n=5, cutoff=0.4)
+
         raise HTTPException(
             status_code=404, 
             detail={
@@ -100,5 +109,50 @@ def recommend(title: str = Query(..., description="Movie title to search for"), 
                 "suggestions": suggestions
             }
         )
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/search")
+@app.get("/autocomplete")
+def search_movies(q: str = Query(..., min_length=1), limit: int = Query(8, ge=1, le=20)):
+    recommender = getattr(model.hybrid, "_DEFAULT_RECOMMENDER", None)
+    if not recommender:
+        return []
+
+    query = q.lower().strip()
+    all_titles = list(recommender.title_to_id.keys())
+    
+    # Prefix / substring matches first
+    matched = [t for t in all_titles if query in t.lower()][:limit]
+    
+    # Fuzzy match fallback if needed
+    if len(matched) < limit:
+        if HAS_RAPIDFUZZ:
+            fuzzy_matches = process.extract(q, all_titles, scorer=fuzz.partial_ratio, limit=limit)
+            for m in fuzzy_matches:
+                if m[0] not in matched and m[1] > 60:
+                    matched.append(m[0])
+                if len(matched) >= limit:
+                    break
+        else:
+            close = difflib.get_close_matches(q, all_titles, n=limit, cutoff=0.35)
+            for m in close:
+                if m not in matched:
+                    matched.append(m)
+
+
+    results = []
+    for title in matched:
+        m_id = recommender.title_to_id.get(title)
+        meta = recommender.id_to_metadata.get(m_id, {})
+        results.append({
+            "movieId": m_id,
+            "title": title,
+            "genres": meta.get("genres", ""),
+            "avg_rating": meta.get("avg_rating", 4.0),
+            "rating_count": meta.get("rating_count", 0)
+        })
+    return results
+
