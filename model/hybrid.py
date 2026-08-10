@@ -274,6 +274,81 @@ class HybridRecommender:
 
         return results
 
+    def get_user_recommendations(
+        self,
+        user_history_titles: List[str],
+        n: int = 10,
+        alpha: Optional[float] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Calculates recommendations based on an entire user watch history.
+        Computes the weighted sum of scores for each movie in history.
+        """
+        if not self.is_fitted:
+            raise RuntimeError("HybridRecommender is not trained. Call fit() or load() first.")
+
+        if alpha is None:
+            alpha = self.default_alpha
+        alpha = float(np.clip(alpha, 0.0, 1.0))
+
+        history_indices = []
+        for title in user_history_titles:
+            m_id = self.find_movie_id(title)
+            if m_id is not None and m_id in self.movie_id_to_idx:
+                history_indices.append(self.movie_id_to_idx[m_id])
+        
+        if not history_indices:
+            return self.get_recommendations(user_history_titles[0] if user_history_titles else "Inception", n, alpha)
+            
+        history_indices_set = set(history_indices)
+        num_movies = len(self.idx_to_movie_id)
+        
+        aggregated_scores = np.zeros(num_movies)
+        weight_sum = 0.0
+        
+        for pos, target_idx in enumerate(history_indices):
+            weight = 1.0 / (1.0 + 0.1 * pos)
+            content_scores = self.content_model.get_similarity_scores(target_idx)
+            collab_scores = self.collab_model.get_similarity_scores(target_idx)
+            hybrid_scores = (alpha * content_scores) + ((1.0 - alpha) * collab_scores)
+            
+            aggregated_scores += hybrid_scores * weight
+            weight_sum += weight
+            
+        aggregated_scores /= max(1.0, weight_sum)
+        
+        min_heap: List[Tuple[float, int]] = []
+        for idx in range(num_movies):
+            if idx in history_indices_set:
+                continue
+                
+            cand_id = self.idx_to_movie_id[idx]
+            final_score = float(aggregated_scores[idx])
+            
+            if len(min_heap) < n:
+                heapq.heappush(min_heap, (final_score, idx))
+            elif final_score > min_heap[0][0]:
+                heapq.heapreplace(min_heap, (final_score, idx))
+
+        top_items = sorted(min_heap, key=lambda x: x[0], reverse=True)
+
+        results: List[Dict[str, Any]] = []
+        for rank, (score, idx) in enumerate(top_items, start=1):
+            m_id = self.idx_to_movie_id[idx]
+            meta = self.id_to_metadata[m_id]
+            results.append({
+                "rank": rank,
+                "movieId": m_id,
+                "title": meta["title"],
+                "genres": meta["genres"],
+                "final_score": round(score, 4),
+                "avg_rating": meta["avg_rating"],
+                "rating_count": meta["rating_count"],
+                "alpha_used": alpha,
+                "query_movie": "User History"
+            })
+        return results
+
     def save(self, filepath: str) -> None:
         """Serializes trained model to disk using pickle."""
         os.makedirs(os.path.dirname(os.path.abspath(filepath)), exist_ok=True)
@@ -336,3 +411,24 @@ def get_recommendations(
         _DEFAULT_RECOMMENDER = HybridRecommender.load(path_to_use)
 
     return _DEFAULT_RECOMMENDER.get_recommendations(movie_title=movie_title, n=n, alpha=alpha)
+
+def get_user_recommendations_from_history(
+    user_history_titles: List[str],
+    n: int = 10,
+    alpha: float = 0.5,
+    model_path: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    global _DEFAULT_RECOMMENDER
+
+    if _DEFAULT_RECOMMENDER is None:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        default_path = os.path.join(base_dir, "models", "hybrid_recommender.pkl")
+        path_to_use = model_path or default_path
+
+        if not os.path.exists(path_to_use):
+            raise FileNotFoundError(
+                f"Trained model artifact not found at {path_to_use}. Please run model/train.py first."
+            )
+        _DEFAULT_RECOMMENDER = HybridRecommender.load(path_to_use)
+
+    return _DEFAULT_RECOMMENDER.get_user_recommendations(user_history_titles=user_history_titles, n=n, alpha=alpha)

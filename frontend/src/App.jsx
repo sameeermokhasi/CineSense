@@ -11,7 +11,9 @@ import TabCatalogView from './components/TabCatalogView';
 import MovieDetailHero from './components/MovieDetailHero';
 import NetflixRow from './components/NetflixRow';
 import AuthPage from './components/AuthPage';
-import { fetchRecommendations } from './services/api';
+import PreferencesModal from './components/PreferencesModal';
+import FaqModal from './components/FaqModal';
+import { fetchRecommendations, recordWatchHistory } from './services/api';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -32,6 +34,7 @@ export default function App() {
   const [breadcrumbs, setBreadcrumbs] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeModal, setActiveModal] = useState(null); // 'preferences', 'faq', or null
 
   // My List local storage persistence
   const [myList, setMyList] = useState(() => {
@@ -203,6 +206,8 @@ export default function App() {
         onSearchMovie={(title) => handleExploreMovie(title, null, true)}
         myListCount={myList.length}
         onSignOut={handleSignOut}
+        onOpenPreferences={() => setActiveModal('preferences')}
+        onOpenFaq={() => setActiveModal('faq')}
       />
 
       {/* Main Content Area */}
@@ -249,6 +254,10 @@ export default function App() {
       <footer className="w-full py-8 border-t border-white/5 text-center text-xs text-slate-500 relative z-10 bg-[#0c0d10]/80 backdrop-blur-md">
         <p>CineSense — Discover your next favorite film & series.</p>
       </footer>
+
+      {/* Modals */}
+      {activeModal === 'preferences' && <PreferencesModal onClose={() => setActiveModal(null)} />}
+      {activeModal === 'faq' && <FaqModal onClose={() => setActiveModal(null)} />}
     </div>
   );
 }

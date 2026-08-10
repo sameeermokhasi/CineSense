@@ -21,13 +21,17 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-from model.hybrid import get_recommendations
+import subprocess
+from apscheduler.schedulers.background import BackgroundScheduler
+
+from model.hybrid import get_recommendations, get_user_recommendations_from_history
 import model.hybrid
 from backend.database import (
     get_user_by_email,
     create_user,
     verify_password,
-    insert_watch_history
+    insert_watch_history,
+    get_user_watch_history
 )
 from backend.redis_cache import (
     get_cached_recommendations,
@@ -88,6 +92,28 @@ def get_poster_url(movie_title: str) -> Optional[str]:
         logging.error(f"Error fetching TMDB for {movie_title}: {e}")
     return None
 
+def get_tmdb_movie_details(movie_title: str) -> Optional[Dict[str, Any]]:
+    if not TMDB_API_KEY or TMDB_API_KEY == "YOUR_TMDB_API_KEY":
+        return None
+    try:
+        response = requests.get(
+            f"{TMDB_BASE_URL}/search/movie",
+            params={"query": movie_title, "api_key": TMDB_API_KEY},
+            timeout=3
+        )
+        if response.status_code == 200:
+            results = response.json().get("results", [])
+            if results:
+                top_match = results[0]
+                return {
+                    "title": top_match.get("title", movie_title),
+                    "overview": top_match.get("overview", ""),
+                    "poster_path": top_match.get("poster_path")
+                }
+    except Exception as e:
+        logging.error(f"Error fetching TMDB details for {movie_title}: {e}")
+    return None
+
 
 @app.on_event("startup")
 def startup_event():
@@ -95,6 +121,20 @@ def startup_event():
         model_path = os.path.join(BASE_DIR, "models", "hybrid_recommender.pkl")
         model.hybrid._DEFAULT_RECOMMENDER = model.hybrid.HybridRecommender.load(model_path)
         logging.info("Hybrid Recommender Model loaded successfully.")
+        
+        # Initialize APScheduler for weekly retraining
+        scheduler = BackgroundScheduler()
+        def retrain_job():
+            logging.info("Starting scheduled model retraining...")
+            subprocess.run([sys.executable, os.path.join(BASE_DIR, "model", "train.py")])
+            # Reload model
+            model.hybrid._DEFAULT_RECOMMENDER = model.hybrid.HybridRecommender.load(model_path)
+            logging.info("Model retrained and reloaded.")
+            
+        scheduler.add_job(retrain_job, 'cron', day_of_week='sun', hour=3, minute=0)
+        scheduler.start()
+        logging.info("APScheduler started: Retraining job scheduled for Sundays at 3:00 AM.")
+        
     except Exception as e:
         logging.error(f"Failed to load model on startup: {e}")
 
@@ -231,6 +271,34 @@ def get_preferred_genres(email: str = Query(...)):
         "genres": get_user_preferred_genres(email)
     }
 
+@app.get("/api/recommend/user")
+def recommend_for_user(email: str = Query(...)):
+    """Personalized recommendations based on user's entire watch history."""
+    email_clean = email.strip().lower()
+    user = get_user_by_email(email_clean)
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+        
+    history = get_user_watch_history(user["id"])
+    
+    if not history:
+        history = ["Inception"]  # Fallback if no history
+        
+    recommender = getattr(model.hybrid, "_DEFAULT_RECOMMENDER", None)
+    if not recommender:
+        raise HTTPException(status_code=500, detail="Recommendation model is not loaded.")
+        
+    try:
+        recommendations = get_user_recommendations_from_history(user_history_titles=history, n=18)
+        
+        for rec in recommendations:
+            rec["poster_url"] = get_poster_url(rec["title"])
+            
+        return {"query": f"Personalized for {email_clean}", "recommendations": recommendations, "cached": False}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # ==========================================
 # Recommendation & Search with Redis Cache
@@ -260,6 +328,37 @@ def recommend(title: str = Query(..., description="Movie title to search for"), 
         return {"query": title, "recommendations": recommendations, "cached": False}
         
     except ValueError as e:
+        # TMDB Cold Start Fallback
+        tmdb_details = get_tmdb_movie_details(title)
+        if tmdb_details and tmdb_details.get("overview"):
+            feature_text = tmdb_details["title"] + " " + tmdb_details["overview"]
+            try:
+                # Transform text using ContentBasedRecommender
+                sparse_vector = recommender.content_model.vectorizer.transform([feature_text])
+                scores = recommender.content_model.tfidf_matrix.dot(sparse_vector.T).toarray().ravel()
+                
+                import numpy as np
+                top_indices = np.argsort(-scores)[:n]
+                
+                fallback_recommendations = []
+                for rank, idx in enumerate(top_indices, 1):
+                    m_id = recommender.content_model.idx_to_movie_id[idx]
+                    meta = recommender.id_to_metadata[m_id]
+                    fallback_recommendations.append({
+                        "rank": rank,
+                        "movieId": m_id,
+                        "title": meta["title"],
+                        "genres": meta["genres"],
+                        "final_score": round(float(scores[idx]), 4),
+                        "avg_rating": meta["avg_rating"],
+                        "rating_count": meta["rating_count"],
+                        "query_movie": tmdb_details["title"] + " (TMDB Fallback)",
+                        "poster_url": get_poster_url(meta["title"])
+                    })
+                return {"query": title, "recommendations": fallback_recommendations, "cached": False, "fallback": True}
+            except Exception as inner_e:
+                logging.error(f"Fallback generation failed: {inner_e}")
+
         all_titles = list(recommender.title_to_id.keys())
         if HAS_RAPIDFUZZ:
             matches = process.extract(title, all_titles, scorer=fuzz.ratio, limit=5)

@@ -71,7 +71,9 @@ export default function Navbar({
   onBackToHome,
   onSearchMovie,
   myListCount = 0,
-  onSignOut
+  onSignOut,
+  onOpenPreferences,
+  onOpenFaq
 }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [navQuery, setNavQuery] = useState('');
@@ -411,14 +413,14 @@ export default function Navbar({
                     <span>My Watchlist ({myListCount})</span>
                   </button>
                   <button
-                    onClick={() => setIsProfileOpen(false)}
+                    onClick={() => { setIsProfileOpen(false); onOpenPreferences(); }}
                     className="w-full px-4 py-2 text-left text-slate-300 hover:text-white hover:bg-white/5 flex items-center space-x-2.5"
                   >
                     <Settings className="w-3.5 h-3.5 text-slate-400" />
                     <span>Preferences</span>
                   </button>
                   <button
-                    onClick={() => setIsProfileOpen(false)}
+                    onClick={() => { setIsProfileOpen(false); onOpenFaq(); }}
                     className="w-full px-4 py-2 text-left text-slate-300 hover:text-white hover:bg-white/5 flex items-center space-x-2.5"
                   >
                     <HelpCircle className="w-3.5 h-3.5 text-slate-400" />

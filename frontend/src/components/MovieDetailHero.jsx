@@ -22,33 +22,52 @@ export default function MovieDetailHero({ movieTitle, movieData }) {
     <div className="w-full px-6 lg:px-12 pt-8 pb-10 font-netflix-body">
       <div className="flex flex-col md:flex-row items-start md:items-center gap-8 lg:gap-12 max-w-6xl">
         {/* Left: Typographic Cinema Card */}
-        <div className="relative w-44 sm:w-56 aspect-[2/3] rounded-2xl overflow-hidden bg-gradient-to-br from-[#1c1f2b] via-[#14161f] to-[#0d0e14] border border-white/15 p-5 flex flex-col justify-between shadow-[0_15px_40px_rgba(0,0,0,0.8)] flex-shrink-0 group">
-          <div className="absolute -top-10 -right-10 w-28 h-28 bg-[#ff3b30]/15 rounded-full blur-2xl pointer-events-none" />
+        <div className="relative w-44 sm:w-56 aspect-[2/3] rounded-2xl overflow-hidden bg-gradient-to-br from-[#1c1f2b] via-[#14161f] to-[#0d0e14] border border-white/15 shadow-[0_15px_40px_rgba(0,0,0,0.8)] flex-shrink-0 group">
+          {/* TMDB Image Layer */}
+          {movieData?.poster_url && (
+            <img 
+              src={movieData.poster_url} 
+              alt={cleanTitle}
+              className="absolute inset-0 w-full h-full object-cover z-0"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
+            />
+          )}
 
-          {/* Top Row: Year & Film Icon */}
-          <div className="flex items-center justify-between relative z-10">
-            <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-white/10 text-slate-300 border border-white/10">
-              {year}
-            </span>
-            <Film className="w-4 h-4 text-[#ff3b30]" />
-          </div>
+          {/* Fallback CSS Typography Layer (Shown if no image or image fails) */}
+          <div 
+            className="absolute inset-0 flex flex-col justify-between p-5 z-0"
+            style={{ display: movieData?.poster_url ? 'none' : 'flex' }}
+          >
+            <div className="absolute -top-10 -right-10 w-28 h-28 bg-[#ff3b30]/15 rounded-full blur-2xl pointer-events-none" />
 
-          {/* Center: Movie Title in Bold Netflix Sans */}
-          <div className="my-auto relative z-10 py-2">
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight drop-shadow-md font-netflix-title">
-              {cleanTitle}
-            </h2>
-          </div>
+            {/* Top Row: Year & Film Icon */}
+            <div className="flex items-center justify-between relative z-10">
+              <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-white/10 text-slate-300 border border-white/10">
+                {year}
+              </span>
+              <Film className="w-4 h-4 text-[#ff3b30]" />
+            </div>
 
-          {/* Bottom Row: IMDb & User Rating */}
-          <div className="pt-2.5 border-t border-white/10 relative z-10 flex items-center justify-between">
-            <span className="px-1.5 py-0.5 rounded bg-[#f5c518] text-black font-black text-[10px]">
-              IMDb {imdb}
-            </span>
-            <span className="flex items-center gap-1 text-amber-400 font-bold text-[11px]">
-              <Star className="w-3 h-3 fill-amber-400" />
-              <span>{userScore}/5</span>
-            </span>
+            {/* Center: Movie Title in Bold Netflix Sans */}
+            <div className="my-auto relative z-10 py-2">
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight drop-shadow-md font-netflix-title">
+                {cleanTitle}
+              </h2>
+            </div>
+
+            {/* Bottom Row: IMDb & User Rating */}
+            <div className="pt-2.5 border-t border-white/10 relative z-10 flex items-center justify-between">
+              <span className="px-1.5 py-0.5 rounded bg-[#f5c518] text-black font-black text-[10px]">
+                IMDb {imdb}
+              </span>
+              <span className="flex items-center gap-1 text-amber-400 font-bold text-[11px]">
+                <Star className="w-3 h-3 fill-amber-400" />
+                <span>{userScore}/5</span>
+              </span>
+            </div>
           </div>
         </div>
 

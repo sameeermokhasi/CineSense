@@ -163,3 +163,30 @@ def insert_watch_history(user_id: int, movie_title: str, genres: str) -> bool:
         release_connection(conn)
 
     return False
+
+def get_user_watch_history(user_id: int, limit: int = 50) -> list:
+    """Retrieves the recent watch history (movie titles) for a user."""
+    conn = get_connection()
+    if not conn:
+        return []
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT movie_title 
+                FROM watch_history 
+                WHERE user_id = %s 
+                ORDER BY created_at DESC 
+                LIMIT %s;
+                """,
+                (user_id, limit)
+            )
+            rows = cur.fetchall()
+            return [row[0] for row in rows]
+    except Exception as e:
+        logger.error("Error executing get_user_watch_history SQL: %s", str(e))
+    finally:
+        release_connection(conn)
+
+    return []

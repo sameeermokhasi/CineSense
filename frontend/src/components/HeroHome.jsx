@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Sparkles, Compass, ChevronDown, Film, Loader2, X } from 'lucide-react';
-import { fetchAutocomplete } from '../services/api';
+import { fetchAutocomplete, TOP_MOVIES_CATALOG, TV_SERIES_CATALOG } from '../services/api';
+import NetflixRow from './NetflixRow';
 
 const TRENDING_CHIPS = [
   "Inception",
@@ -37,6 +38,68 @@ export default function HeroHome({ onSearchMovie, isLoading }) {
 
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Personalized Recommendations State
+  const [personalizedRecs, setPersonalizedRecs] = useState([]);
+
+  // Fetch and filter based on Preferences
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('cinesense_preferences');
+      if (saved) {
+        const prefs = JSON.parse(saved);
+        const hasGenres = prefs.genres && prefs.genres.length > 0;
+        const hasLanguages = prefs.languages && prefs.languages.length > 0;
+        
+        let minRatingNum = 0;
+        if (prefs.minRating && prefs.minRating !== 'Any') {
+          minRatingNum = parseInt(prefs.minRating.replace('+', ''));
+        }
+
+        if (hasGenres || hasLanguages || minRatingNum > 0) {
+          const allItems = [...TOP_MOVIES_CATALOG, ...TV_SERIES_CATALOG];
+          const filtered = allItems.filter(item => {
+            // Genre Check
+            let matchesGenre = true;
+            if (hasGenres) {
+              matchesGenre = prefs.genres.some(g => (item.genres || '').includes(g));
+            }
+            
+            // Language Check
+            let matchesLanguage = true;
+            if (hasLanguages) {
+              matchesLanguage = prefs.languages.includes(item.language);
+            }
+            
+            // Rating Check
+            let matchesRating = true;
+            if (minRatingNum > 0) {
+              matchesRating = (item.avg_rating || 0) >= minRatingNum;
+            }
+
+            return matchesGenre && matchesLanguage && matchesRating;
+          });
+
+          // Map to NetflixRow format
+          const formatted = filtered.map((m, idx) => ({
+            rank: idx + 1,
+            movieId: m.movieId,
+            title: m.title,
+            genres: m.genres,
+            final_score: parseFloat((0.95 - idx * 0.01).toFixed(2)),
+            avg_rating: m.avg_rating || 4.2,
+            imdb_rating: m.imdb_rating || 8.0,
+            rating_count: m.rating_count || 10000,
+            year: m.year || m.title.match(/\((\d{4})\)/)?.[1] || "2000"
+          }));
+
+          // Sort by IMDb rating and take top 18
+          formatted.sort((a, b) => b.imdb_rating - a.imdb_rating);
+          setPersonalizedRecs(formatted.slice(0, 18));
+        }
+      }
+    } catch {}
+  }, []);
 
   // Typewriter Effect Logic
   useEffect(() => {
@@ -253,15 +316,25 @@ export default function HeroHome({ onSearchMovie, isLoading }) {
           </div>
         </div>
 
-        {/* Empty state bottom indicator */}
-        <div className="mt-20 pt-10 border-t border-white/5 flex flex-col items-center justify-center text-center">
-          <div className="w-12 h-12 rounded-full bg-[#1b1e27] border border-white/10 flex items-center justify-center text-[#ff3b30] mb-3">
-            <Compass className="w-5 h-5" />
+        {/* Empty state bottom indicator or Personalized Row */}
+        {personalizedRecs.length > 0 ? (
+          <div className="mt-16 border-t border-white/5 pt-12 text-left w-full">
+            <NetflixRow 
+              title="Recommended For You" 
+              recommendations={personalizedRecs} 
+              onSelectMovie={(title, item) => onSearchMovie(title)} 
+            />
           </div>
-          <p className="text-xs text-slate-400">
-            Search for a movie or series you love and we'll show you more like it.
-          </p>
-        </div>
+        ) : (
+          <div className="mt-20 pt-10 border-t border-white/5 flex flex-col items-center justify-center text-center">
+            <div className="w-12 h-12 rounded-full bg-[#1b1e27] border border-white/10 flex items-center justify-center text-[#ff3b30] mb-3">
+              <Compass className="w-5 h-5" />
+            </div>
+            <p className="text-xs text-slate-400">
+              Search for a movie or series you love and we'll show you more like it.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
