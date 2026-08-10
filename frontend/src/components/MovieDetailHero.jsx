@@ -1,6 +1,6 @@
 /**
  * components/MovieDetailHero.jsx
- * Selected Movie Hero Banner with IMDb Rating (/10) & User Star Rating (★/5)
+ * Selected Movie Hero Banner with Netflix Sans Typography & IMDb/User Ratings
  */
 
 import React from 'react';
@@ -19,23 +19,23 @@ export default function MovieDetailHero({ movieTitle, movieData }) {
   const userScore = avg.toFixed(1);
 
   return (
-    <div className="w-full px-6 lg:px-12 pt-8 pb-10">
+    <div className="w-full px-6 lg:px-12 pt-8 pb-10 font-netflix-body">
       <div className="flex flex-col md:flex-row items-start md:items-center gap-8 lg:gap-12 max-w-6xl">
         {/* Left: Typographic Cinema Card */}
         <div className="relative w-44 sm:w-56 aspect-[2/3] rounded-2xl overflow-hidden bg-gradient-to-br from-[#1c1f2b] via-[#14161f] to-[#0d0e14] border border-white/15 p-5 flex flex-col justify-between shadow-[0_15px_40px_rgba(0,0,0,0.8)] flex-shrink-0 group">
-          <div className="absolute -top-10 -right-10 w-28 h-28 bg-[#f97316]/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -top-10 -right-10 w-28 h-28 bg-[#ff3b30]/15 rounded-full blur-2xl pointer-events-none" />
 
           {/* Top Row: Year & Film Icon */}
           <div className="flex items-center justify-between relative z-10">
             <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-white/10 text-slate-300 border border-white/10">
               {year}
             </span>
-            <Film className="w-4 h-4 text-[#f97316]" />
+            <Film className="w-4 h-4 text-[#ff3b30]" />
           </div>
 
-          {/* Center: Movie Title */}
+          {/* Center: Movie Title in Bold Netflix Sans */}
           <div className="my-auto relative z-10 py-2">
-            <h2 className="text-xl sm:text-2xl font-black text-white leading-tight tracking-tight drop-shadow-md">
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight drop-shadow-md font-netflix-title">
               {cleanTitle}
             </h2>
           </div>
@@ -52,16 +52,16 @@ export default function MovieDetailHero({ movieTitle, movieData }) {
           </div>
         </div>
 
-        {/* Right: Info & Description */}
+        {/* Right: Info & Description in Netflix Sans */}
         <div className="flex-1 text-left space-y-4">
           {/* Now Exploring Badge */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ff3b30]/15 border border-[#ff3b30]/30 text-xs font-semibold text-[#ff6b4a]">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ff3b30]/15 border border-[#ff3b30]/30 text-xs font-bold text-[#ff453a]">
             <Play className="w-3 h-3 fill-current" />
             <span>Now exploring</span>
           </div>
 
-          {/* Big Bold Title */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1]">
+          {/* Big Bold Netflix Title */}
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.05] font-netflix-title">
             {cleanTitle}
           </h1>
 

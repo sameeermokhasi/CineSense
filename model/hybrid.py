@@ -203,33 +203,54 @@ class HybridRecommender:
         target_idx = self.movie_id_to_idx[movie_id]
         target_meta = self.id_to_metadata[movie_id]
 
-        # 2. Get content similarity scores
+        # 2. Target genre set
+        target_genres = set(g.strip().lower() for g in target_meta.get("genres", "").split("|") if g.strip())
+
+        # 3. Get content similarity scores
         content_scores = self.content_model.get_similarity_scores(target_idx)
 
-        # 3. Get collaborative similarity scores
+        # 4. Get collaborative similarity scores
         collab_scores = self.collab_model.get_similarity_scores(target_idx)
 
-        # 4. Weighted hybrid fusion
-        hybrid_scores = (alpha * content_scores) + ((1.0 - alpha) * collab_scores)
+        # 5. Weighted hybrid fusion with Genre Affinity Filter
+        raw_hybrid_scores = (alpha * content_scores) + ((1.0 - alpha) * collab_scores)
 
-        # 5. Top-N retrieval via Min-Heap (heapq) of size k: O(M log k)
-        # Heap elements: (hybrid_score, movie_idx)
+        # 6. Top-N retrieval via Min-Heap (heapq) of size k: O(M log k)
         min_heap: List[Tuple[float, int]] = []
-        num_candidates = len(hybrid_scores)
+        num_candidates = len(raw_hybrid_scores)
 
         for idx in range(num_candidates):
             if idx == target_idx:
                 continue  # Skip query movie itself
 
-            score = float(hybrid_scores[idx])
+            cand_id = self.idx_to_movie_id[idx]
+            cand_meta = self.id_to_metadata[cand_id]
+            cand_genres = set(g.strip().lower() for g in cand_meta.get("genres", "").split("|") if g.strip())
+
+            # Genre Consistency Match
+            overlap_count = len(target_genres.intersection(cand_genres))
+            union_count = len(target_genres.union(cand_genres)) or 1
+            jaccard = overlap_count / union_count
+
+            # Apply genre consistency factor
+            if len(target_genres) > 0:
+                if overlap_count == 0:
+                    genre_multiplier = 0.25  # Heavily penalize unrelated genres (e.g. Action for Comedy-Drama)
+                else:
+                    genre_multiplier = 0.70 + 0.30 * jaccard
+            else:
+                genre_multiplier = 1.0
+
+            final_score = float(raw_hybrid_scores[idx]) * genre_multiplier
 
             if len(min_heap) < n:
-                heapq.heappush(min_heap, (score, idx))
-            elif score > min_heap[0][0]:
-                heapq.heapreplace(min_heap, (score, idx))
+                heapq.heappush(min_heap, (final_score, idx))
+            elif final_score > min_heap[0][0]:
+                heapq.heapreplace(min_heap, (final_score, idx))
 
         # Extract items sorted descending
         top_items = sorted(min_heap, key=lambda x: x[0], reverse=True)
+
 
         # 6. Format results with full metadata and score breakdown
         results: List[Dict[str, Any]] = []

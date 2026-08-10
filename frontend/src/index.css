@@ -2,9 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Netflix Official Typography Stack: Netflix Sans (Inter/Helvetica) & Bebas Neue */
 @layer base {
   html, body {
-    @apply bg-[#0c0d10] text-[#e5e7eb] font-sans overflow-x-hidden antialiased;
+    @apply bg-[#0c0d10] text-[#e5e7eb] overflow-x-hidden antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
     margin: 0;
     padding: 0;
     width: 100%;
@@ -12,17 +14,47 @@
   }
 }
 
-/* Glassmorphism & Cinema Cards */
+/* Netflix Display Typography (Iconic Tall Cinematic Headlines) */
+.font-netflix-display {
+  font-family: 'Bebas Neue', -apple-system, BlinkMacSystemFont, "Arial Black", sans-serif;
+  letter-spacing: 0.03em;
+}
+
+/* Netflix Sans UI / Titles */
+.font-netflix-title {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.font-netflix-body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 400;
+}
+
+/* Playfair Display Classes */
+.font-playfair {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.font-playfair-hero {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Netflix Cinema Card Styling */
 .netflix-card {
   background: #14161e;
   border: 1px solid rgba(255, 255, 255, 0.07);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .netflix-card:hover {
-  transform: translateY(-6px) scale(1.03);
-  border-color: rgba(249, 115, 22, 0.5);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(249, 115, 22, 0.25);
+  transform: translateY(-5px) scale(1.02);
+  border-color: rgba(255, 59, 48, 0.5);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.85), 0 0 20px rgba(255, 59, 48, 0.2);
 }
 
 /* Custom Scrollbar */
@@ -41,22 +73,5 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #f97316;
-}
-
-/* Subtle Shimmer */
-.skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.02) 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.02) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.6s infinite linear;
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  background: #ff3b30;
 }

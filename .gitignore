@@ -1,3 +1,11 @@
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+.vite/
+frontend/.vite/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -42,6 +50,12 @@ data/*.csv
 models/*.pkl
 !models/.gitkeep
 
+# Database & SQLite files
+*.db
+*.sqlite
+*.sqlite3
+cinesense.db
+
 # IDEs & System files
 .vscode/
 .idea/
@@ -49,3 +63,4 @@ models/*.pkl
 *.swo
 .DS_Store
 Thumbs.db
+
