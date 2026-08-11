@@ -3,14 +3,20 @@ import sys
 import logging
 from typing import Optional, List, Dict, Any
 
+# pyrefly: ignore [missing-import]
 from fastapi import FastAPI, HTTPException, Query, status
+# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
+# pyrefly: ignore [missing-import]
 from pydantic import BaseModel
 import difflib
+import re
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 import requests
 
 try:
+    # pyrefly: ignore [missing-import]
     from rapidfuzz import process, fuzz
     HAS_RAPIDFUZZ = True
 except ImportError:
@@ -501,9 +507,9 @@ def recommend(title: str = Query(..., description="Movie title to search for"), 
         set_cached_recommendations(title, n, recommendations)
 
         # Retrieve metadata for the searched movie
-        matched_title = recommender._find_closest_title(title)
-        m_id = recommender.title_to_id.get(matched_title)
+        m_id = recommender.find_movie_id(title)
         meta = recommender.id_to_metadata.get(m_id, {}) if m_id is not None else {}
+        matched_title = meta.get("title")
         
         # Check if search correction / spellcheck applied
         did_you_mean = None

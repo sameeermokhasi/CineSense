@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Settings, Star, Check } from 'lucide-react';
 
 const GENRES = ['Action', 'Comedy', 'Drama', 'Thriller', 'Romance', 'Sci-Fi', 'Horror', 'Fantasy'];
-const LANGUAGES = ['English', 'Hindi', 'Kannada', 'Tamil', 'Telugu', 'Korean'];
+const LANGUAGES = ['English', 'Hindi', 'Korean'];
 const RATINGS = ['Any', '2+', '3+', '4+'];
 
 export default function PreferencesModal({ onClose }) {
