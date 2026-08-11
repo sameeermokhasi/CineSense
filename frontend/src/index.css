@@ -75,3 +75,55 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #ff3b30;
 }
+
+@keyframes shrink {
+  0% {
+    width: 100%;
+  }
+  100% {
+    width: 0%;
+  }
+}
+
+@keyframes bounceSubtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes scaleUp {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-bounce-subtle {
+  animation: bounceSubtle 3s ease-in-out infinite;
+}
+
+.animate-scale-up {
+  animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-spin-slow {
+  animation: spinSlow 8s linear infinite;
+}
+
+

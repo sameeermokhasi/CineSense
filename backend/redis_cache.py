@@ -58,6 +58,20 @@ def get_cached_recommendations(movie_title: str, n: int) -> Optional[List[Dict[s
     return _in_memory_cache.get(key)
 
 
+def flush_recommendation_cache() -> None:
+    """Flushes all stale recommendation cache entries."""
+    _in_memory_cache.clear()
+    if redis_client:
+        try:
+            keys = redis_client.keys("rec:*")
+            if keys:
+                redis_client.delete(*keys)
+                logger.info("Flushed %d cached recommendation keys from Redis.", len(keys))
+        except Exception as e:
+            logger.warning("Redis flush error: %s", str(e))
+
+
+
 def record_user_watch(user_email: str, movie_title: str, genres: str) -> None:
     """
     Records watched movie and increments user preferred genre counters in Redis.

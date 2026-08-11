@@ -1,11 +1,6 @@
-/**
- * components/HeroHome.jsx
- * Netflix-style Full Viewport Hero with Dynamic Typewriter Animation
- */
-
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Sparkles, Compass, ChevronDown, Film, Loader2, X } from 'lucide-react';
-import { fetchAutocomplete, TOP_MOVIES_CATALOG, TV_SERIES_CATALOG } from '../services/api';
+import { Search, Sparkles, Compass, ChevronDown, Film, Loader2, X, ArrowRight, Bot } from 'lucide-react';
+import { fetchAutocomplete, fetchSpellcheck, TOP_MOVIES_CATALOG, TV_SERIES_CATALOG } from '../services/api';
 import NetflixRow from './NetflixRow';
 
 const TRENDING_CHIPS = [
@@ -24,15 +19,17 @@ const TYPEWRITER_PHRASES = [
   "Stories you'll adore,"
 ];
 
-export default function HeroHome({ onSearchMovie, isLoading }) {
+export default function HeroHome({ onSearchMovie, isLoading, onOpenCineBot }) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [spellcheckResult, setSpellcheckResult] = useState(null);
 
   // Typewriter Animation State
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [displayText, setDisplayText] = useState('');
+
   const [isDeleting, setIsDeleting] = useState(false);
   const [typingSpeed, setTypingSpeed] = useState(90);
 
@@ -130,20 +127,29 @@ export default function HeroHome({ onSearchMovie, isLoading }) {
     return () => clearTimeout(timer);
   }, [displayText, isDeleting, currentPhraseIndex, typingSpeed]);
 
-  // Autocomplete debounce
+  // Autocomplete & Spellcheck debounce
   useEffect(() => {
     if (!query || query.trim().length < 2) {
       setSuggestions([]);
       setIsOpen(false);
+      setSpellcheckResult(null);
       return;
     }
 
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const res = await fetchAutocomplete(query, 7);
-        setSuggestions(res);
-        setIsOpen(res.length > 0);
+        const [autoRes, spellRes] = await Promise.all([
+          fetchAutocomplete(query, 7),
+          fetchSpellcheck(query)
+        ]);
+        setSuggestions(autoRes);
+        setIsOpen(autoRes.length > 0);
+        if (spellRes && spellRes.has_typo) {
+          setSpellcheckResult(spellRes);
+        } else {
+          setSpellcheckResult(null);
+        }
       } catch (e) {
         // ignore
       } finally {
@@ -153,6 +159,7 @@ export default function HeroHome({ onSearchMovie, isLoading }) {
 
     return () => clearTimeout(timer);
   }, [query]);
+
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -263,10 +270,34 @@ export default function HeroHome({ onSearchMovie, isLoading }) {
               ))}
             </div>
           )}
+
+          {/* Smart Search Spellcheck Banner ("Did you mean...?") */}
+          {spellcheckResult && spellcheckResult.has_typo && (
+            <div className="mt-3 w-full px-4 py-3 rounded-2xl bg-gradient-to-r from-[#1c1f2e] via-[#1a1d2a] to-[#141622] border border-amber-500/30 flex items-center justify-between text-xs animate-fade-in text-left shadow-xl">
+              <div className="flex items-center gap-2.5 truncate mr-3">
+                <Sparkles className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                <span className="text-slate-300 truncate">
+                  Did you mean <strong className="text-white font-bold underline decoration-amber-400 underline-offset-2">{spellcheckResult.suggested_title}</strong>?
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30 flex-shrink-0 hidden sm:inline">
+                  {Math.round((spellcheckResult.confidence || 0.9) * 100)}% match
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleSelect(spellcheckResult.suggested_title)}
+                className="px-3.5 py-1.5 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-all flex items-center gap-1.5 flex-shrink-0 shadow-md shadow-amber-500/20 active:scale-95"
+              >
+                <span>Explore</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Quick Suggestion Chips */}
-        <div className="mt-6 flex items-center justify-center flex-wrap gap-2 text-xs text-slate-400">
+        {/* Quick Suggestion Chips & Ask CineBot AI Trigger */}
+        <div className="mt-6 flex items-center justify-center flex-wrap gap-2 text-xs text-slate-400 max-w-2xl">
           <span className="mr-1">Try:</span>
           {TRENDING_CHIPS.map((chip) => (
             <button
@@ -277,8 +308,20 @@ export default function HeroHome({ onSearchMovie, isLoading }) {
               {chip}
             </button>
           ))}
+
+          {/* Ask CineBot AI Prompt Trigger */}
+          {onOpenCineBot && (
+            <button
+              onClick={onOpenCineBot}
+              className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#e50914]/20 via-[#ff3b30]/20 to-[#ff5722]/20 hover:from-[#e50914] hover:to-[#ff3b30] text-[#ff453a] hover:text-white border border-[#ff3b30]/40 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+            >
+              <Bot className="w-3.5 h-3.5" />
+              <span>Ask CineBot AI</span>
+            </button>
+          )}
         </div>
       </div>
+
 
       {/* Down Arrow Indicator */}
       <div className="pb-8 text-slate-500 animate-bounce">

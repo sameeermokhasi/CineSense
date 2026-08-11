@@ -92,9 +92,142 @@ export function getMovieDescription(title, genres = "", year = "") {
     return `${eraText} chilling psychological tale immerses audiences in an unsettling atmosphere of dread, suspense, and mysterious occurrences. As dark secrets unravel, the characters are pushed to their psychological limits in a gripping struggle against the unknown.`;
   }
 
-  if (gList.includes("animation") || gList.includes("children")) {
-    return `${eraText} enchanting animated feature brings vivid artistry, delightful humor, and timeless life lessons to viewers of all ages. Filled with whimsical characters and an inspiring heart, it celebrates friendship, discovery, and the boundless power of imagination.`;
-  }
-
   return `${eraText} acclaimed film offers a memorable cinematic experience defined by rich storytelling, nuanced performances, and distinctive visual style. A standout favorite that continues to resonate with movie lovers and audiences worldwide.`;
 }
+
+const KNOWN_MOVIE_GENRES = {
+  "interstellar": "Sci-Fi|Adventure|Drama|IMAX",
+  "inception": "Action|Crime|Drama|Mystery|Sci-Fi|Thriller|IMAX",
+  "the dark knight": "Action|Crime|Drama|IMAX",
+  "matrix, the": "Action|Sci-Fi",
+  "the matrix": "Action|Sci-Fi",
+  "pulp fiction": "Comedy|Crime|Drama|Thriller",
+  "fight club": "Action|Crime|Drama|Thriller",
+  "goodfellas": "Biography|Crime|Drama",
+  "the godfather": "Crime|Drama",
+  "spirited away": "Animation|Adventure|Drama|Fantasy",
+  "heat": "Action|Crime|Drama|Thriller",
+  "3 idiots": "Comedy|Drama|Romance",
+  "dilwale dulhania le jayenge": "Comedy|Musical|Romance",
+  "lagaan: once upon a time in india": "Comedy|Drama|Musical|Romance",
+  "sholay": "Action|Adventure|Comedy|Drama",
+  "pk": "Comedy|Drama|Fantasy|Sci-Fi",
+  "swades: we, the people": "Drama",
+  "gangs of wasseypur": "Action|Crime|Drama|Thriller",
+  "gravity": "Action|Drama|Sci-Fi|IMAX",
+  "edge of tomorrow": "Action|Adventure|Sci-Fi|IMAX",
+  "robocop": "Action|Crime|Sci-Fi|IMAX",
+  "stranger things": "Drama|Fantasy|Horror|Mystery|Sci-Fi",
+  "breaking bad": "Crime|Drama|Thriller",
+  "mirzapur": "Action|Crime|Drama|Thriller",
+  "panchayat": "Comedy|Drama"
+};
+
+const KNOWN_MOVIE_LANGUAGES = {
+  "3 idiots": "Hindi",
+  "dilwale dulhania le jayenge": "Hindi",
+  "lagaan": "Hindi",
+  "like stars on earth": "Hindi",
+  "taare zameen par": "Hindi",
+  "swades": "Hindi",
+  "sholay": "Hindi",
+  "gangs of wasseypur": "Hindi",
+  "pk": "Hindi",
+  "dangal": "Hindi",
+  "chhichhore": "Hindi",
+  "chichhore": "Hindi",
+  "munna bhai": "Hindi",
+  "rang de basanti": "Hindi",
+  "chak de": "Hindi",
+  "zindagi na milegi dobara": "Hindi",
+  "queen": "Hindi",
+  "barfi": "Hindi",
+  "andhadhun": "Hindi",
+  "kuch kuch hota hai": "Hindi",
+  "kabhi khushi kabhie gham": "Hindi",
+  "veer-zaara": "Hindi",
+  "mohabbatein": "Hindi",
+  "panchayat": "Hindi",
+  "mirzapur": "Hindi",
+  "sacred games": "Hindi",
+  "the family man": "Hindi",
+  "gullak": "Hindi",
+  "kantra": "Kannada",
+  "kgf": "Kannada",
+  "rrr": "Telugu",
+  "baahubali": "Telugu",
+  "pushpa": "Telugu",
+  "vikram": "Tamil",
+  "jai bhim": "Tamil",
+  "parasite": "Korean",
+  "squid game": "Korean",
+  "oldboy": "Korean",
+  "memories of murder": "Korean",
+  "train to busan": "Korean",
+  "the handmaiden": "Korean",
+  "spirited away": "Japanese",
+  "your name": "Japanese",
+  "princess mononoke": "Japanese",
+  "howl's moving castle": "Japanese",
+  "grave of the fireflies": "Japanese",
+  "weathering with you": "Japanese",
+  "attack on titan": "Japanese",
+  "dead poets society": "English",
+  "good will hunting": "English",
+  "forrest gump": "English",
+  "the truman show": "English",
+  "the intouchables": "French",
+  "life is beautiful": "Italian",
+  "miracle in cell no. 7": "Korean",
+  "extreme job": "Korean",
+  "a silent voice": "Japanese",
+  "tumbbad": "Hindi",
+  "dark": "German",
+  "money heist": "Spanish",
+  "elite": "Spanish",
+  "inception": "English",
+  "interstellar": "English",
+  "the dark knight": "English",
+  "breaking bad": "English",
+  "stranger things": "English",
+  "pulp fiction": "English",
+  "fight club": "English",
+  "goodfellas": "English",
+  "the godfather": "English",
+  "matrix, the": "English",
+  "the matrix": "English",
+  "source code": "English",
+  "memento": "English",
+  "arrival": "English",
+  "gravity": "English",
+  "edge of tomorrow": "English",
+  "se7en": "English",
+  "prisoners": "English",
+  "shutter island": "English"
+
+};
+
+export function getMovieLanguage(title, fallback = "English") {
+  if (!title) return fallback;
+  const clean = title.toLowerCase().replace(/\s*\(\d{4}\)/, '').trim();
+  for (const [key, lang] of Object.entries(KNOWN_MOVIE_LANGUAGES)) {
+    if (clean === key || clean.includes(key) || key.includes(clean)) {
+      return lang;
+    }
+  }
+  return fallback;
+}
+
+export function getMovieGenres(title, fallback = "") {
+  if (fallback && fallback.trim() && fallback !== "Cinema") return fallback;
+  if (!title) return "Cinema";
+  const clean = title.toLowerCase().replace(/\s*\(\d{4}\)/, '').trim();
+  for (const [key, g] of Object.entries(KNOWN_MOVIE_GENRES)) {
+    if (clean === key || clean.includes(key) || key.includes(clean)) {
+      return g;
+    }
+  }
+  return fallback || "Cinema";
+}
+
+

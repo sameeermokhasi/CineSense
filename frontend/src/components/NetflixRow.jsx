@@ -1,34 +1,92 @@
-/**
- * components/NetflixRow.jsx
- * Netflix-style Movie Cards with Official Netflix Typography (Netflix Sans / Inter)
- */
-
-import React from 'react';
-import { Star, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Star, ArrowRight, Globe } from 'lucide-react';
 import { getImdbRating } from '../services/api';
+import { getMovieLanguage } from '../services/descriptions';
 
 export default function NetflixRow({ recommendations, onSelectMovie, title = "More Films Like This" }) {
+  const [activeLang, setActiveLang] = useState('all');
+
   if (!recommendations || recommendations.length === 0) return null;
+
+  // Extract available languages and counts
+  const langCounts = recommendations.reduce((acc, m) => {
+    const l = m.language || getMovieLanguage(m.title, 'English');
+    acc[l] = (acc[l] || 0) + 1;
+    return acc;
+  }, {});
+
+  const availableLangs = Object.keys(langCounts);
+
+  const filteredRecommendations = activeLang === 'all'
+    ? recommendations
+    : recommendations.filter(m => (m.language || getMovieLanguage(m.title, 'English')) === activeLang);
+
+  const getLanguagePillStyle = (lang) => {
+    switch (lang) {
+      case 'Hindi': return 'text-emerald-300 border-emerald-500/35 bg-emerald-500/15';
+      case 'English': return 'text-sky-300 border-sky-500/35 bg-sky-500/15';
+      case 'Korean': return 'text-purple-300 border-purple-500/35 bg-purple-500/15';
+      case 'Japanese': return 'text-amber-300 border-amber-500/35 bg-amber-500/15';
+      case 'French': return 'text-rose-300 border-rose-500/35 bg-rose-500/15';
+      case 'Spanish': return 'text-orange-300 border-orange-500/35 bg-orange-500/15';
+      case 'German': return 'text-yellow-300 border-yellow-500/35 bg-yellow-500/15';
+      case 'Italian': return 'text-teal-300 border-teal-500/35 bg-teal-500/15';
+      default: return 'text-slate-300 border-white/20 bg-white/10';
+    }
+  };
 
   return (
     <div className="w-full px-6 lg:px-12 py-6 font-netflix-body">
-      {/* Section Header */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Section Header & Language Filter Pills */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2 font-netflix-title">
           <span>{title}</span>
           <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#ff3b30]/15 text-[#ff453a] font-bold">
-            {recommendations.length} films
+            {filteredRecommendations.length} {filteredRecommendations.length === 1 ? 'film' : 'films'}
           </span>
         </h2>
+
+        {/* Multi-Language Filter Pills */}
+        {availableLangs.length > 1 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setActiveLang('all')}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                activeLang === 'all'
+                  ? 'bg-white text-black shadow-md'
+                  : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
+              }`}
+            >
+              All ({recommendations.length})
+            </button>
+
+            {availableLangs.map((lang) => (
+              <button
+                key={lang}
+                onClick={() => setActiveLang(lang)}
+                className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${
+                  activeLang === lang
+                    ? 'bg-[#ff3b30] text-white shadow-[0_0_15px_rgba(255,59,48,0.4)]'
+                    : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
+                }`}
+              >
+                <span>{lang}</span>
+                <span className="text-[10px] opacity-75 font-mono">({langCounts[lang]})</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Grid of Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
-        {recommendations.map((movie) => {
+        {filteredRecommendations.map((movie) => {
           const matchScore = Math.round((movie.final_score || 0.85) * 100);
           const cleanTitle = (movie.title || '').replace(/\s*\(\d{4}\)/, '').trim();
           const year = movie.year || (movie.title?.match(/\((\d{4})\)/)?.[1] || '');
-          const primaryGenre = movie.genres ? movie.genres.split('|')[0] : 'Cinema';
+          const lang = movie.language || getMovieLanguage(movie.title, 'English');
+          const genresList = (movie.genres || '').split('|').map(g => g.trim()).filter(Boolean);
+          const displayGenres = genresList.length > 0 ? genresList.slice(0, 2).join(' • ') : 'Cinema';
           const imdbRating = movie.imdb_rating || getImdbRating(movie.title, movie.avg_rating);
           const userRating = (movie.avg_rating || 4.1).toFixed(1);
 
@@ -73,12 +131,17 @@ export default function NetflixRow({ recommendations, onSelectMovie, title = "Mo
 
                 {/* Center: Movie Title in Bold Netflix Sans */}
                 <div className="my-auto py-2 relative z-10 text-left">
-                  <h3 className="text-sm sm:text-base font-extrabold text-white group-hover:text-[#ff453a] transition-colors line-clamp-3 leading-snug tracking-tight font-netflix-title">
+                  <h3 className="text-sm sm:text-base font-extrabold text-white group-hover:text-[#ff3b30] transition-colors line-clamp-3 leading-snug tracking-tight font-netflix-title">
                     {cleanTitle}
                   </h3>
-                  <p className="text-[11px] text-slate-400 mt-1 truncate font-normal">
-                    {primaryGenre}
-                  </p>
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border tracking-wide shadow-sm ${getLanguagePillStyle(lang)}`}>
+                      {lang}
+                    </span>
+                    <span className="text-[11px] text-slate-400 truncate font-medium">
+                      {displayGenres}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Ratings Row: IMDb (/10) & User Rating (★/5) */}
@@ -102,11 +165,12 @@ export default function NetflixRow({ recommendations, onSelectMovie, title = "Mo
               {/* Permanent Overlay for Hover Effects on Images */}
               {movie.poster_url && (
                 <div className="image-hover-overlay absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10 flex flex-col justify-end p-4">
-                     <h3 className="text-sm font-bold text-white mb-1 leading-tight">{cleanTitle}</h3>
-                     <div className="flex items-center gap-2 text-xs">
-                        <span className="text-amber-400 font-bold flex items-center gap-1"><Star className="w-3 h-3" /> {userRating}</span>
-                        <span className="text-slate-300">{year}</span>
-                     </div>
+                  <h3 className="text-sm font-bold text-white mb-1 leading-tight">{cleanTitle}</h3>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-amber-400 font-bold flex items-center gap-1"><Star className="w-3 h-3" /> {userRating}</span>
+                    <span className="text-slate-300">{year}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getLanguagePillStyle(lang)}`}>{lang}</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -116,3 +180,4 @@ export default function NetflixRow({ recommendations, onSelectMovie, title = "Mo
     </div>
   );
 }
+
