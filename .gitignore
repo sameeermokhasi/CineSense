@@ -47,7 +47,7 @@ venv.bak/
 archive/
 data/*.csv
 !data/.gitkeep
-models/*.pkl
+# models/*.pkl
 !models/.gitkeep
 
 # Database & SQLite files
